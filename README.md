@@ -1,39 +1,45 @@
-# Search Intent Analyzer (Streamlit)
+# 🔎 Search Intent Analyzer (Firecrawl Edition)
 
-A lightweight app to classify **search intent** (Informational / Transactional / Navigational / Commercial Investigation)
-using SERP features, keyword modifiers, and top-page content cues.
+**Version:** 1.2.0  
+**Built by:** [Knovik](https://knovik.com) • **Madusanka Premaratne (Madus)**  
+**License:** MIT
 
-- **Version:** 1.0.0  
-- **Author:** Knovik • Madusanka Premaratne (Madus)  
-- **License:** MIT
+---
 
-## Run locally
+### 🧠 Overview
+**Search Intent Analyzer** helps marketing and SEO teams identify the *search intent* behind any keyword using **Firecrawl’s `/v2/search` API**.  
+It classifies each keyword into one of four intents:
 
+- **Informational** — Users seeking knowledge or tutorials  
+- **Transactional** — Ready-to-buy or action-oriented users  
+- **Navigational** — Looking for a brand or specific site  
+- **Commercial Investigation** — Comparing options or reviews  
+
+The app visualizes results in an **interactive Streamlit dashboard** with rich charts, color-coded badges, and per-keyword confidence scores.
+
+---
+
+### 🚀 Features
+✅ Real-time SERP and content analysis via **Firecrawl**  
+✅ Classifies keywords into **4 intent categories**  
+✅ **Confidence-based scoring** using SERP features, modifiers, and page content  
+✅ **Engaging dashboard** — cards, filters, and charts powered by Plotly  
+✅ **CSV export**, expandable result details, and clear visual hierarchy  
+
+---
+
+### 🧩 Tech Stack
+- **Python 3.10+**
+- **Streamlit**
+- **Pandas / NumPy**
+- **Plotly**
+- **Firecrawl API**
+
+---
+
+### ⚙️ Setup
+
+#### 1. Clone the repository
 ```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
-
-## Deploy on Streamlit Community Cloud
-
-1. Push this folder to a **public GitHub repo** (e.g., `knovik/search-intent-analyzer`).
-2. Go to https://share.streamlit.io → **Create app** → pick your repo/branch → `app.py`.
-3. (Optional) Add API keys in **Settings → Secrets**:
-
-```toml
-# Streamlit secrets
-SERPAPI_KEY = "xxxxxxxxxxxxxxxx"
-```
-
-4. Click **Deploy**. That’s it.
-
-## Versioning
-
-- Start at **1.0.0**
-- **Patch** = bug fixes → 1.0.1
-- **Minor** = features → 1.1.0
-- **Major** = breaking changes → 2.0.0
-
-## Screenshot-like banner/footer
-
-The app renders a centered banner and footer including your name and version.
+git clone https://github.com/KnovikLLC/search-intent-analyzer-python.git
+cd search-intent-analyzer-python
