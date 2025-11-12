@@ -75,13 +75,13 @@ def firecrawl_search(query, limit=10, country='US', location=''):
     headers={'Authorization': f'Bearer {FIRECRAWL_KEY}', 'Content-Type':'application/json'}
     payload={'query':query,'limit':limit,'country':country,'location':location or None,'sources':['web'],'scrapeOptions':{'formats':['markdown','html'],'onlyMainContent':True,'storeInCache':True}}
     payload={k:v for k,v in payload.items() if v not in (None,'',[])}
-    r=requests.post('https://api.firecrawl.dev/v2/search', headers=headers, json=payload, timeout=60); r.raise_for_status(); return r.json()
+    r=requests.post(FIRECRAWL_SEARCH_URL, headers=headers, json=payload, timeout=60); r.raise_for_status(); return r.json()
 
 def map_features_to_intents_from_fc(items, query):
     score={i:0.0 for i in INTENTS}
     texts=[query]+[" ".join([str(it.get('title','')),str(it.get('description','')),str(it.get('markdown',''))]) for it in items[:10]]
-    joined=" 
- ".join(texts).lower()
+    # FIX: correct join string to include an explicit newline delimiter
+    joined=" \n ".join(texts).lower()
     if any(k in joined for k in ['faq','people also ask','how to','guide','tutorial']): score['Informational']+=0.6
     if any(k in joined for k in ['buy','price','add to cart','checkout','shop']): score['Transactional']+=0.6
     if any(k in joined for k in ['official site','login','contact us']): score['Navigational']+=0.4
