@@ -1,21 +1,18 @@
-# app.py (Firecrawl edition, Engaging UI)
-# -------------------------------------------
-# 🔎 Search Intent Analyzer — Marketing Team
-# Version: 1.2.0
-# Built by Knovik • Madusanka Premaratne (Madus)
-# -------------------------------------------
+# app.py — Search Intent Analyzer (Firecrawl + Classifier, Engaging UI)
+# Version: 1.3.0
+# Author: Knovik • Madusanka Premaratne (Madus)
 
 import os, re, json, datetime as dt
-from typing import List, Dict, Any, Optional, Tuple
-
+from typing import List, Dict, Any, Tuple
 import streamlit as st
 import pandas as pd
 import numpy as np
 import requests
-from bs4 import BeautifulSoup
 import plotly.express as px
 
-__version__ = "1.2.0"
+from search_intent_classifier import SearchIntentClassifier, Intent
+
+__version__ = "1.3.0"
 AUTHOR = "Knovik Engineering Team"
 FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY", "")
 
@@ -26,18 +23,13 @@ INTENT_COLORS = {
     "Informational": "#2563eb",
     "Transactional": "#16a34a",
     "Navigational": "#f59e0b",
-    "Commercial Investigation": "#ef4444"
+    "Commercial Investigation": "#de5454"
 }
 
 CARD_CSS = '''
 <style>
-.badge {
-  display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; color:white;
-}
-.card {
-  border:1px solid #e6e6e6; border-radius:14px; padding:14px 16px; margin-bottom:12px;
-  background: #fff;
-}
+.badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; color:white; }
+.card { border:1px solid #e6e6e6; border-radius:14px; padding:14px 16px; margin-bottom:12px; background:#fff; }
 .card h4 { margin:0 0 6px 0; }
 .kv { font-size:13px; color:#444; }
 .kv b { color:#111; }
@@ -45,7 +37,7 @@ CARD_CSS = '''
 </style>
 '''
 
-st.set_page_config(page_title='Search Intent Analyzer (Firecrawl)', page_icon='🔎', layout='wide')
+st.set_page_config(page_title="Search Intent Analyzer", page_icon="🔎", layout="wide")
 st.markdown(CARD_CSS, unsafe_allow_html=True)
 
 def badge(text, color):
@@ -58,7 +50,7 @@ def hero_banner():
         <div style="text-align:center; padding:18px 8px; border-top:1px solid #e6e6e6;">
             <h2 style="margin:6px 0 10px 0;">Search Intent Analyzer v{__version__}</h2>
             <p style="margin:6px 0 6px 0;">Built by <strong>{AUTHOR}</strong></p>
-            <p style="margin:0;">Powered by Firecrawl Search + Scrape</p>
+            <p style="margin:0;">Powered by Firecrawl + Custom Classifier</p>
         </div>
         ''',
         unsafe_allow_html=True,
@@ -71,7 +63,6 @@ def app_footer():
         <div style="text-align:center; font-size:13px; color:#666; padding-bottom:12px;">
             <div><strong>Search Intent Analyzer</strong> • v{__version__}</div>
             <div>© {dt.datetime.now().year} {AUTHOR} — MIT License</div>
-            <div>Firecrawl API • Streamlit Cloud Ready</div>
         </div>
         ''',
         unsafe_allow_html=True,
@@ -84,24 +75,18 @@ with st.sidebar:
     st.header('Settings')
     st.caption(f'Version: {__version__} • Author: {AUTHOR}')
     st.subheader('Scoring Weights (%)')
-    w_serp   = st.slider('SERP features', 0, 100, 40)
-    w_rules  = st.slider('Keyword modifiers', 0, 100, 25)
-    w_pages  = st.slider('Top pages content', 0, 100, 35)
-    w_trends = st.slider('Trends signal', 0, 100, 0)
+    w_serp   = st.slider('SERP-like signals (from Firecrawl content)', 0, 100, 40)
+    w_rules  = st.slider('Keyword modifiers (rules)', 0, 100, 20)
+    w_pages  = st.slider('Top pages content cues', 0, 100, 25)
+    clf_weight = st.slider('Classifier weight (hybrid)', 0, 100, 15)
 
     st.divider()
     st.subheader('Firecrawl (required)')
     fc_key_ui = st.text_input('FIRECRAWL_API_KEY', FIRECRAWL_KEY, type='password')
     if fc_key_ui: FIRECRAWL_KEY = fc_key_ui
-    st.caption('Add as Streamlit Secret in production.')
-
     country = st.text_input('Country code (ISO)', 'US')
     location = st.text_input('Location (optional)', '')
     limit = st.slider('Number of results', 1, 20, 10)
-
-    st.divider()
-    st.subheader('Crawler')
-    max_pages_fetch = st.slider('Max top pages to use', 0, 10, 5)
 
     st.divider()
     st.subheader('Rules')
@@ -110,7 +95,7 @@ with st.sidebar:
     navigational_mods = st.text_area('Navigational', 'brand,login,official,homepage,near me,locations,contact')
     commercial_mods = st.text_area('Commercial Investigation', 'best,top,vs,review,compare,comparison,alternative,pros,cons')
 
-# ---------- Core logic ----------
+# ---------- Core ----------
 INTENTS = ['Informational', 'Transactional', 'Navigational', 'Commercial Investigation']
 
 def contains_any(s: str, words: List[str]) -> bool:
@@ -127,28 +112,24 @@ def firecrawl_search(query: str, limit: int = 10, country: str = 'US', location:
         'country': country,
         'location': location or None,
         'sources': ['web'],
-        'scrapeOptions': {
-            'formats': ['markdown', 'html'],
-            'onlyMainContent': True,
-            'storeInCache': True
-        }
+        'scrapeOptions': {'formats': ['markdown','html'], 'onlyMainContent': True, 'storeInCache': True}
     }
-    payload = {k: v for k, v in payload.items() if v not in (None, '', [])}
+    payload = {k:v for k,v in payload.items() if v not in (None,'',[])}
     r = requests.post(FIRECRAWL_SEARCH_URL, headers=headers, json=payload, timeout=60)
     r.raise_for_status()
     return r.json()
 
-def map_features_to_intents_from_fc(result_items: List[Dict[str, Any]]) -> Dict[str, float]:
+def map_features_to_intents_from_fc(items: List[Dict[str, Any]]) -> Dict[str, float]:
     score = {i:0.0 for i in INTENTS}
-    for item in result_items[:10]:
+    for item in items[:10]:
         text = ' '.join([str(item.get('title','')), str(item.get('description','')), str(item.get('markdown',''))]).lower()
-        if any(k in text for k in ['faq', 'people also ask', 'how to', 'guide', 'tutorial']):
+        if any(k in text for k in ['faq','people also ask','how to','guide','tutorial']):
             score['Informational'] += 0.2
-        if any(k in text for k in ['buy', 'price', 'add to cart', 'checkout', 'shop']):
+        if any(k in text for k in ['buy','price','add to cart','checkout','shop']):
             score['Transactional'] += 0.3
-        if any(k in text for k in ['official site', 'login', 'contact us']):
+        if any(k in text for k in ['official site','login','contact us']):
             score['Navigational'] += 0.2
-        if any(k in text for k in ['review', 'best', 'top', 'vs ', 'comparison']):
+        if any(k in text for k in ['review','best','top',' vs ','comparison']):
             score['Commercial Investigation'] += 0.3
     return score
 
@@ -164,31 +145,41 @@ def analyze_top_pages(items: List[Dict[str,Any]], max_pages: int) -> Tuple[Dict[
     score = {i:0.0 for i in INTENTS}
     notes = []
     for it in items[:max_pages]:
-        url = it.get('url')
-        markdown = (it.get('markdown') or '').lower()
-        html = (it.get('html') or '').lower()
-
+        url = it.get('url'); markdown = (it.get('markdown') or '').lower(); html = (it.get('html') or '').lower()
         ctas = [t for t in ['buy now','add to cart','order','checkout','subscribe','sign up','download','contact'] if t in markdown or t in html]
         schema = []
         if 'faq' in markdown or 'faqpage' in html: schema.append('FAQ')
         if 'product' in html and ('price' in html or 'sku' in html): schema.append('Product')
         if 'review' in markdown or 'aggregaterating' in html: schema.append('Review')
-
         if ctas or 'Product' in schema: score['Transactional'] += 1
         if 'FAQ' in schema: score['Informational'] += 1
         if 'Review' in schema: score['Commercial Investigation'] += 1
-
         notes.append({'url': url, 'ctas': ctas, 'schema': schema})
     return score, notes
 
-def combine_scores(s_serp, s_rules, s_pages, w_serp, w_rules, w_pages, w_trends):
+def map_classifier_scores(clf_scores: dict) -> dict:
+    out = {i: 0.0 for i in INTENTS}
+    for k, v in clf_scores.items():
+        key = k.value if hasattr(k, 'value') else str(k)
+        key = key.lower()
+        if 'transactional' in key:
+            out['Transactional'] += v/100.0
+        elif 'navigational' in key:
+            out['Navigational'] += v/100.0
+        elif 'commercial' in key:
+            out['Commercial Investigation'] += v/100.0
+        elif 'problem' in key or 'information' in key:
+            out['Informational'] += v/100.0
+    s = sum(out.values()) or 1.0
+    return {k: vv/s for k, vv in out.items()}
+
+def combine_scores(s_serp, s_rules, s_pages, w_serp, w_rules, w_pages, s_clf=None, clf_weight=0):
     combined = {i:0.0 for i in INTENTS}
     for i in INTENTS:
-        combined[i] = (
-            (w_serp/100)*s_serp.get(i,0.0) +
-            (w_rules/100)*s_rules.get(i,0.0) +
-            (w_pages/100)*s_pages.get(i,0.0)
-        )
+        base = ((w_serp/100)*s_serp.get(i,0.0) + (w_rules/100)*s_rules.get(i,0.0) + (w_pages/100)*s_pages.get(i,0.0))
+        if s_clf:
+            base = (1 - clf_weight/100.0)*base + (clf_weight/100.0)*s_clf.get(i,0.0)
+        combined[i] = base
     return combined
 
 def label_from_scores(scores: Dict[str,float]) -> Tuple[str,str,float,str]:
@@ -208,13 +199,11 @@ tab_input, tab_results, tab_overview = st.tabs(['➊ Input', '➋ Results', '➌
 with tab_input:
     st.subheader('Enter keywords')
     kws_text = st.text_area('One keyword per line', height=160, placeholder='e.g.\nhow to clean MAF sensor\nbest car seat 2025\nbmw login\nbuy iphone 14 case')
-    tbs = st.selectbox('Time range', ['any', 'past week', 'past month', 'past year'])
     run_btn = st.button('Run Analysis', type='primary')
 
 def run_for_keyword(q: str) -> Dict[str, Any]:
     data = firecrawl_search(q, limit=limit, country=country, location=location)
     items = (data.get('data') or {}).get('web', [])
-
     s_serp = map_features_to_intents_from_fc(items)
 
     mods = {
@@ -224,9 +213,21 @@ def run_for_keyword(q: str) -> Dict[str, Any]:
         'commercial':[m.strip() for m in commercial_mods.split(',') if m.strip()],
     }
     s_rules = map_modifiers_to_intents(q, mods)
-    s_pages, page_notes = analyze_top_pages(items, max_pages_fetch)
+    s_pages, page_notes = analyze_top_pages(items, max_pages=5)
 
-    combined = combine_scores(s_serp, s_rules, s_pages, w_serp, w_rules, w_pages, w_trends)
+    urls = [it.get('url') for it in items if it.get('url')]
+    titles = [it.get('title') or '' for it in items]
+    clf_scores_json = "{}"
+    s_clf = None
+    try:
+        clf = SearchIntentClassifier()
+        primary_enum, clf_scores = clf.classify_intent(urls, titles)
+        s_clf = map_classifier_scores(clf_scores)
+        clf_scores_json = json.dumps({(k.value if hasattr(k,'value') else str(k)): v for k, v in clf_scores.items()})
+    except Exception as e:
+        s_clf = None
+
+    combined = combine_scores(s_serp, s_rules, s_pages, w_serp, w_rules, w_pages, s_clf=s_clf, clf_weight=clf_weight)
     primary, secondary, confidence, branch = label_from_scores(combined)
 
     top_urls = [it.get('url') for it in items[:10] if it.get('url')]
@@ -239,6 +240,7 @@ def run_for_keyword(q: str) -> Dict[str, Any]:
         'top_urls': json.dumps(top_urls),
         'scores': json.dumps(combined),
         'notes': json.dumps(page_notes),
+        'clf_scores': clf_scores_json,
     }
 
 if run_btn:
@@ -255,20 +257,19 @@ if run_btn:
             try:
                 rows.append(run_for_keyword(q))
             except Exception as e:
-                rows.append({'keyword': q, 'primary_intent':'', 'secondary_intent':'', 'confidence_pct':0, 'branching':'Error', 'top_urls':'[]', 'scores':'{}', 'notes':json.dumps({'error':str(e)})})
+                rows.append({'keyword': q, 'primary_intent':'', 'secondary_intent':'', 'confidence_pct':0, 'branching':'Error', 'top_urls':'[]', 'scores':'{}', 'notes':json.dumps({'error':str(e)}), 'clf_scores':'{}'})
             progress.progress(int(i/len(kw_list)*100))
         progress.empty()
         df = pd.DataFrame(rows)
         st.session_state['result_df'] = df
         st.success('Done! See the Results tab.')
 
-# ---------- Engaging RESULTS view ----------
+# ---------- RESULTS ----------
 with tab_results:
     df = st.session_state.get('result_df')
     if df is None or df.empty:
         st.info('Run an analysis to see results.')
     else:
-        # Filters
         st.subheader('Filters')
         intents_sel = st.multiselect('Primary intent', INTENTS, default=INTENTS)
         min_conf = st.slider('Min confidence (%)', 0, 100, 0)
@@ -279,7 +280,6 @@ with tab_results:
             mask &= df['keyword'].str.contains(re.escape(query), case=False, na=False)
         fdf = df[mask].copy()
 
-        # Overview row
         c1, c2, c3, c4 = st.columns(4)
         with c1: st.metric('Keywords', len(fdf))
         with c2: st.metric('Avg confidence', f"{fdf['confidence_pct'].mean():.1f}%" if len(fdf) else '—')
@@ -287,8 +287,6 @@ with tab_results:
         with c4: st.metric('Clear intents', int((fdf['branching']=='Clear').sum()) if len(fdf) else 0)
 
         st.divider()
-
-        # Card gallery
         st.subheader('Keyword Cards')
         for _, r in fdf.sort_values(by=['confidence_pct','primary_intent'], ascending=[False, True]).iterrows():
             color = INTENT_COLORS.get(r['primary_intent'], '#374151')
@@ -303,10 +301,13 @@ with tab_results:
             ''', unsafe_allow_html=True)
             with st.expander('Details & Notes'):
                 st.json(json.loads(r['notes'] or '{}'))
+                st.markdown('**Classifier scores (raw):**')
+                try:
+                    st.json(json.loads(r.get('clf_scores','{}')))
+                except Exception:
+                    pass
 
         st.divider()
-
-        # Interactive table with progress bars
         st.subheader('Table')
         st.dataframe(
             fdf,
@@ -318,7 +319,7 @@ with tab_results:
         )
         st.download_button('Download filtered CSV', fdf.to_csv(index=False).encode('utf-8'), 'intent_report_filtered.csv', 'text/csv')
 
-# ---------- Overview charts ----------
+# ---------- OVERVIEW ----------
 with tab_overview:
     df = st.session_state.get('result_df')
     if df is None or df.empty:
