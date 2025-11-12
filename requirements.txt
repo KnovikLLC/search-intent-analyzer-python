@@ -1,0 +1,7 @@
+streamlit==1.39.0
+pandas
+numpy
+requests
+beautifulsoup4
+python-dotenv
+openpyxl
