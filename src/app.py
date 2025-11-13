@@ -2,22 +2,30 @@
 # Version: 1.4.0
 # Author: Knovik • Madusanka Premaratne (Madus)
 
-import os, re, json, math, datetime as dt
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+
+import re, json, math, datetime as dt
 import streamlit as st
 import pandas as pd
 import requests
 import plotly.express as px
 
+from src.config.constants import (
+    __version__,
+    AUTHOR,
+    FIRECRAWL_KEY,
+    FIRECRAWL_SEARCH_URL,
+    INTENTS,
+    INTEGRATION_VERBS,
+    BRAND_LEXICON,
+)
+
 try:
     from src.search_intent_classifier import SearchIntentClassifier  # type: ignore
 except Exception:
     SearchIntentClassifier, Intent = None, None
-
-__version__ = "1.4.0"
-AUTHOR = "Knovik Engineering Team"
-FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY", "")
-
-FIRECRAWL_SEARCH_URL = "https://api.firecrawl.dev/v2/search"
 
 INTENT_COLORS = {
     "Informational": "#2563eb",
@@ -86,37 +94,6 @@ with st.sidebar:
         "Commercial Investigation",
         "best,top,vs,review,compare,comparison,alternative,pros,cons",
     )
-
-INTENTS = ["Informational", "Transactional", "Navigational", "Commercial Investigation"]
-INTEGRATION_VERBS = [
-    "connect",
-    "pair",
-    "link",
-    "use",
-    "enable",
-    "setup",
-    "set up",
-    "add",
-    "integrate",
-    "bridge",
-    "work with",
-    "works with",
-]
-BRAND_LEXICON = [
-    "alexa",
-    "amazon",
-    "apple",
-    "homekit",
-    "siri",
-    "homepod",
-    "google",
-    "nest",
-    "assistant",
-    "smartthings",
-    "ikea",
-    "philips hue",
-]
-
 
 def contains_any(s, words):
     s_low = s.lower()
