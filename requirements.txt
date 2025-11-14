@@ -6,3 +6,6 @@ beautifulsoup4
 plotly
 python-dotenv
 openpyxl
+
+# Local LLM Integration
+ollama>=0.1.0
