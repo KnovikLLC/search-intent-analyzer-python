@@ -19,9 +19,9 @@ Powerful search intent analysis tool with **two modes**: traditional rule-based 
 
 **Perfect for:** Privacy-conscious users, high-volume analysis, offline work, budget-conscious projects
 
-👉 **[Quick Start Guide for LLM Version](#-llm-version-quick-start)**
+**Developed by:** Deelaka Kariyawasam
 
----
+👉 **[Quick Start Guide for LLM Version](#-llm-version-quick-start)**
 
 ### 📊 Original: Rule-Based Version
 
@@ -31,6 +31,8 @@ Powerful search intent analysis tool with **two modes**: traditional rule-based 
 ✅ **Proven Accuracy** - Battle-tested approach
 
 **Perfect for:** Users needing SERP data, low query volumes, deterministic results
+
+**Developed by:** Madusanka Premaratne
 
 👉 **[Quick Start Guide for Rule-Based Version](#-rule-based-version-quick-start)**
 
@@ -306,7 +308,7 @@ MIT License - See [LICENSE](LICENSE) file for details
 
 ## 👨‍💻 Author
 
-**Knovik • Madusanka Premaratne (Madus)**
+**Knovik • Madusanka Premaratne (Madus) & Deelaka Kariyawasam**
 
 © 2024 Knovik LLC
 
