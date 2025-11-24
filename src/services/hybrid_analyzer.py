@@ -280,20 +280,20 @@ class HybridIntentAnalyzer:
         firecrawl_api_key: str = "",
         llm_model: str = "llama3.2:3b",
         llm_base_url: str = "http://localhost:11434",
-        firecrawl_weight: float = 0.40,
-        llm_weight: float = 0.40,
-        keyword_weight: float = 0.20,
+        firecrawl_weight: float = 0.70,
+        llm_weight: float = 0.0,
+        keyword_weight: float = 0.30,
     ):
         """
         Initialize Hybrid Intent Analyzer.
 
         Args:
             firecrawl_api_key: Firecrawl API key (optional)
-            llm_model: Ollama model name
+            llm_model: Ollama model name (used for reasoning generation, not scoring)
             llm_base_url: Ollama API endpoint
-            firecrawl_weight: Weight for Firecrawl signals (0-1)
-            llm_weight: Weight for LLM signals (0-1)
-            keyword_weight: Weight for keyword signals (0-1)
+            firecrawl_weight: Weight for Firecrawl SERP signals (0-1, default 70% - most trusted)
+            llm_weight: Weight for LLM (0-1, default 0% - used only for explanation generation)
+            keyword_weight: Weight for keyword pattern signals (0-1, default 30%)
         """
         # Normalize weights
         total = firecrawl_weight + llm_weight + keyword_weight
@@ -414,27 +414,9 @@ class HybridIntentAnalyzer:
             except Exception as e:
                 print(f"⚠️  Firecrawl analysis failed: {str(e)}")
 
-        # 3. LLM reasoning (if enabled)
-        llm_scores = None
-        llm_reasoning = ""
-        llm_confidence = 0.0
-        llm_primary = ""
-
-        if use_llm:
-            try:
-                self._init_llm()
-                if self.llm_analyzer:
-                    llm_result = self.llm_analyzer.analyze(keyword)
-                    llm_scores = llm_result.all_scores
-                    llm_reasoning = llm_result.reasoning
-                    llm_confidence = llm_result.confidence
-                    llm_primary = llm_result.primary_intent
-            except Exception as e:
-                print(f"Warning: LLM analysis failed: {str(e)}")
-
-        # 4. Aggregate all scores with weighted averaging
+        # 3. Aggregate scores (only Firecrawl + Keywords, no LLM scoring)
         final_scores = self.aggregate_scores(
-            keyword_scores, firecrawl_scores, llm_scores
+            keyword_scores, firecrawl_scores, None
         )
 
         # 5. Determine primary/secondary intents
@@ -460,24 +442,65 @@ class HybridIntentAnalyzer:
         else:
             confidence_level = IntentConfidence.LOW
 
-        # 7. Generate reasoning with compact list comprehension
-        reasons = (
-            [f"LLM: {llm_reasoning[:80]}" for _ in [1] if use_llm and llm_reasoning]
-            + [
-                f"analyzed {firecrawl_count} SERP results"
-                for _ in [1]
-                if firecrawl_used
-            ]
-            + [
-                f"SERP features: {', '.join(serp_features[:3])}"
-                for _ in [1]
-                if serp_features
-            ]
-        )
+        # 7. Generate reasoning from SERP + Keywords, then ask LLM to explain
+        # Build context for LLM explanation
+        analysis_context = f"Keyword: '{keyword}'\n"
+        analysis_context += f"Primary Intent: {primary} ({primary_score:.1f}%)\n"
+        analysis_context += f"Secondary Intent: {secondary} ({secondary_score:.1f}%)\n\n"
+        
+        if firecrawl_used:
+            analysis_context += f"SERP Analysis: {firecrawl_count} results analyzed\n"
+            if serp_features:
+                analysis_context += f"SERP Features: {', '.join(serp_features[:3])}\n"
+        
+        analysis_context += f"\nKeyword Pattern Scores: "
+        analysis_context += ", ".join([f"{k}: {v:.0f}%" for k, v in sorted(keyword_scores.items(), key=lambda x: x[1], reverse=True)[:2]])
+        
+        if firecrawl_scores:
+            analysis_context += f"\nFirecrawl SERP Scores: "
+            analysis_context += ", ".join([f"{k}: {v:.0f}%" for k, v in sorted(firecrawl_scores.items(), key=lambda x: x[1], reverse=True)[:2]])
+        
+        # Use LLM to explain WHY this classification makes sense
+        llm_reasoning = ""
+        llm_confidence = 0.0
+        llm_primary = ""
+        
+        if use_llm:
+            try:
+                self._init_llm()
+                if self.llm_analyzer:
+                    # Create a custom prompt for explanation
+                    explanation_prompt = f"""{analysis_context}
 
-        reasoning = f"Hybrid analysis classified as '{primary}'. " + (
-            "; ".join(reasons) if reasons else "Based on keyword patterns."
-        )
+Based on the SERP analysis and keyword patterns above, explain in 2-3 sentences WHY the primary intent is '{primary}' and why '{secondary}' is the secondary intent. Focus on what the SERP results and keyword patterns reveal about user intent."""
+                    
+                    # Get LLM explanation (we'll extract just the reasoning text)
+                    llm_result = self.llm_analyzer.analyze(explanation_prompt)
+                    llm_reasoning = llm_result.reasoning
+                    llm_confidence = llm_result.confidence
+                    llm_primary = llm_result.primary_intent
+            except Exception as e:
+                print(f"⚠️  LLM explanation generation failed: {str(e)}")
+        
+        # Build final reasoning
+        reasons = []
+        
+        if firecrawl_used:
+            serp_summary = f"SERP analysis of {firecrawl_count} results shows {primary_score:.0f}% '{primary}' intent"
+            if serp_features:
+                serp_summary += f" (features: {', '.join(serp_features[:2])})"
+            reasons.append(serp_summary)
+        
+        # Add keyword pattern insight
+        top_keyword_intent = max(keyword_scores.items(), key=lambda x: x[1])
+        if top_keyword_intent[1] > 0:
+            reasons.append(f"Keyword patterns indicate {top_keyword_intent[0]}")
+        
+        # Add LLM explanation if available
+        if llm_reasoning:
+            reasons.append(f"Analysis: {llm_reasoning}")
+        
+        reasoning = ". ".join(reasons) + "." if reasons else "Based on keyword and SERP analysis."
 
         # 8. Build result
         return HybridIntentResult(
