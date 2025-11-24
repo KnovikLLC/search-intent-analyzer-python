@@ -11,14 +11,14 @@ Powerful search intent analysis tool with **two modes**: traditional rule-based 
 
 ### 🎯 **Hybrid Version** (Recommended - Most Accurate & Flexible)
 
-✅ **Best of Both Worlds** - Combines Firecrawl SERP + Ollama LLM + Keyword Patterns  
-✅ **Maximum Accuracy** - Uses three signal sources with weighted scoring  
-✅ **Flexible** - Works with any combination of signals (Firecrawl optional!)  
-✅ **AI-Powered** - LLM reasoning for semantic understanding  
+✅ **SERP-Based Classification** - Powered by Firecrawl real search data (70%)  
+✅ **Keyword Pattern Matching** - Fast regex-based detection (30%)  
+✅ **AI-Powered Explanations** - LLM generates human-readable reasoning  
+✅ **Maximum Accuracy** - Intent determined by real SERP data  
 ✅ **Modular Architecture** - Clean, maintainable component structure  
 ✅ **Fully Configurable** - Adjust signal weights and settings in real-time
 
-**Perfect for:** Production use, research projects, flexible deployment scenarios
+**Perfect for:** Production use, research projects, SERP-based intent analysis
 
 **Run with:** `streamlit run src/app_hybrid.py`
 
@@ -30,33 +30,35 @@ Powerful search intent analysis tool with **two modes**: traditional rule-based 
 
 ### Signal Sources
 
-The Hybrid Analyzer intelligently combines three complementary signals:
+The Hybrid Analyzer combines SERP data with keyword patterns for classification:
 
-1. **🔍 Firecrawl SERP** (40% weight, optional)
+1. **🔍 Firecrawl SERP** (70% weight, required)
 
    - Real Google search results
    - SERP feature detection
    - Actual user intent signals
+   - Primary classification source
    - Requires API key (~$100-150/month)
 
-2. **🤖 Ollama LLM** (40% weight)
+2. **📝 Keyword Patterns** (30% weight)
 
-   - AI-powered semantic analysis
-   - Contextual reasoning
-   - 100% free and private
-   - Requires local Ollama installation
-
-3. **📝 Keyword Patterns** (20% weight)
    - Fast regex-based detection
    - Optimized compiled patterns
-   - Always available as fallback
+   - Supporting classification signal
    - Zero cost
 
-**Flexible Deployment:**
+3. **🤖 Ollama LLM** (Explanation only - 0% weight)
+   - Generates human-readable explanations
+   - Explains WHY the classification was made
+   - Does NOT participate in scoring
+   - 100% free and private
+   - Optional but recommended for insights
 
-- ✅ **Free Mode**: LLM + Keywords (no Firecrawl)
-- ✅ **Fallback Mode**: Firecrawl + Keywords (if LLM unavailable)
-- ✅ **Full Mode**: All three signals (maximum accuracy!)
+**Architecture:**
+
+- ✅ **Classification**: SERP (70%) + Keywords (30%) = 100%
+- ✅ **Explanation**: LLM analyzes the result and explains reasoning
+- ✅ **Accuracy**: Intent determined by real search data, not AI interpretation
 
 ---
 
