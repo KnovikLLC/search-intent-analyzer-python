@@ -24,8 +24,9 @@ def render_input_tab(selected_model: str):
         **Model:** {selected_model}
         
         **Features:**
-        - AI-powered analysis
-        - Detailed reasoning
+        - SERP-based classification (70%)
+        - Keyword pattern matching (30%)
+        - AI-powered explanations
         - Confidence scores
         - Batch processing
         """
