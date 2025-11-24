@@ -75,7 +75,7 @@ def main():
         '<p class="main-header">🎯 Hybrid Intent Analyzer</p>', unsafe_allow_html=True
     )
     st.markdown(
-        '<p class="sub-header">Combining Firecrawl SERP Data with Ollama LLM Reasoning</p>',
+        '<p class="sub-header">SERP-Based Intent Classification with AI-Powered Explanations</p>',
         unsafe_allow_html=True,
     )
 
