@@ -34,31 +34,29 @@ def render_intent_card(result: HybridIntentResult):
 
 def render_signal_badges(result: HybridIntentResult):
     """Render active signal badges."""
-    st.markdown("### 📊 Active Signals")
+    st.markdown("### 📊 Scoring Signals")
 
-    badges = [
+    # Scoring signals
+    scoring_badges = [
         render_signal_badge(
             result.firecrawl_used,
             "🔍",
             (
-                f"Firecrawl ({result.firecrawl_results_count} results)"
+                f"Firecrawl SERP ({result.firecrawl_results_count} results)"
                 if result.firecrawl_used
                 else "Firecrawl (not used)"
-            ),
-        ),
-        render_signal_badge(
-            bool(result.llm_reasoning),
-            "🤖",
-            (
-                f"LLM ({result.llm_primary_intent})"
-                if result.llm_reasoning
-                else "LLM (not used)"
             ),
         ),
         render_signal_badge(True, "📝", "Keywords"),  # Keywords always active
     ]
 
-    st.markdown("".join(badges), unsafe_allow_html=True)
+    st.markdown("".join(scoring_badges), unsafe_allow_html=True)
+
+    # LLM explanation badge (separate)
+    if result.llm_reasoning:
+        st.markdown("### 💡 AI Explanation")
+        llm_badge = render_signal_badge(True, "🤖", "LLM Analysis (explanation only)")
+        st.markdown(llm_badge, unsafe_allow_html=True)
 
 
 def render_metrics(result: HybridIntentResult):
