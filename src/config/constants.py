@@ -1,7 +1,55 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 __version__ = "2.0.0"
 AUTHOR = "Knovik Engineering Team"
 
+# Firecrawl Configuration
+FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY", "")
+FIRECRAWL_SEARCH_URL = "https://api.firecrawl.dev/v1/search"
+
+# Intent Categories
 INTENTS = ["Informational", "Transactional", "Navigational", "Commercial Investigation"]
+
+# Integration verbs for detecting tool/platform content
+INTEGRATION_VERBS = [
+    "integrate",
+    "connect",
+    "sync",
+    "api",
+    "webhook",
+    "plugin",
+    "extension",
+    "add-on",
+    "import",
+    "export",
+    "automation",
+]
+
+# Brand names for navigational intent detection
+BRAND_LEXICON = [
+    "facebook",
+    "google",
+    "amazon",
+    "apple",
+    "microsoft",
+    "netflix",
+    "twitter",
+    "instagram",
+    "linkedin",
+    "youtube",
+    "spotify",
+    "slack",
+    "zoom",
+    "salesforce",
+    "adobe",
+    "oracle",
+    "ibm",
+    "sap",
+    "shopify",
+]
 
 INTENT_COLORS = {
     "Informational": "#2563eb",
