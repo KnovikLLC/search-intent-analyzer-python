@@ -82,18 +82,41 @@ def render_weight_settings(
     """Render signal weight configuration."""
     st.sidebar.subheader("Signal Weights")
 
-    # Weight presets for different combinations
+    # Weight presets - LLM is now used only for explanation, not scoring
+    # Firecrawl SERP data is the most trusted source
     weight_presets = {
-        (True, True): (0.40, 0.40, 0.20),  # Both enabled
-        (True, False): (0.60, 0.0, 0.40),  # Only Firecrawl
-        (False, True): (0.0, 0.70, 0.30),  # Only LLM
+        (True, True): (
+            0.70,
+            0.0,
+            0.30,
+        ),  # Both enabled - Firecrawl + Keywords (LLM for explanation only)
+        (True, False): (0.70, 0.0, 0.30),  # Only Firecrawl
+        (False, True): (0.0, 0.0, 1.0),  # Only LLM (fallback to keywords)
         (False, False): (0.0, 0.0, 1.0),  # Keywords only
     }
 
     if use_firecrawl and use_llm:
-        fc_weight = st.sidebar.slider("Firecrawl weight", 0.0, 1.0, 0.40, 0.05)
-        llm_weight = st.sidebar.slider("LLM weight", 0.0, 1.0, 0.40, 0.05)
-        kw_weight = st.sidebar.slider("Keyword weight", 0.0, 1.0, 0.20, 0.05)
+        st.sidebar.caption(
+            "⭐ Firecrawl (SERP) + Keywords for scoring, LLM for explanation"
+        )
+        fc_weight = st.sidebar.slider(
+            "Firecrawl weight",
+            0.0,
+            1.0,
+            0.70,
+            0.05,
+            help="Real SERP data - primary scoring source",
+        )
+        kw_weight = st.sidebar.slider(
+            "Keyword weight",
+            0.0,
+            1.0,
+            0.30,
+            0.05,
+            help="Pattern matching - secondary scoring",
+        )
+        llm_weight = 0.0  # LLM not used for scoring
+        st.sidebar.info("💡 LLM generates explanation only, not used for scoring")
     else:
         fc_weight, llm_weight, kw_weight = weight_presets[(use_firecrawl, use_llm)]
 
@@ -115,10 +138,14 @@ def render_about_section():
     """Render about section with app information."""
     st.sidebar.subheader("About")
     st.sidebar.info(
-        "**Hybrid Intent Analyzer** combines multiple signals for accurate intent classification:\n\n"
-        "🔍 **Firecrawl** - Real SERP data\n"
-        "🤖 **Ollama LLM** - AI reasoning\n"
-        "📝 **Keywords** - Pattern matching"
+        "**Hybrid Intent Analyzer v2.0**\n\n"
+        "🎯 **Intent Classification (100%):**\n"
+        "• 70% Firecrawl SERP Analysis\n"
+        "• 30% Keyword Pattern Matching\n\n"
+        "🤖 **LLM Role:**\n"
+        "• Generates explanations ONLY\n"
+        "• Does NOT participate in scoring\n"
+        "• Explains WHY the classification was made"
     )
 
 
