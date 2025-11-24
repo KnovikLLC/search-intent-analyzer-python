@@ -18,8 +18,15 @@ Hybrid approach benefits:
 from typing import Dict, List
 from dataclasses import dataclass, field
 from enum import Enum
-import requests
 import re
+
+try:
+    from firecrawl import Firecrawl
+
+    FIRECRAWL_AVAILABLE = True
+except ImportError:
+    FIRECRAWL_AVAILABLE = False
+    Firecrawl = None
 
 from .llm_intent_analyzer import LLMIntentAnalyzer
 
@@ -173,71 +180,89 @@ class FirecrawlSERPAnalyzer:
 
 
 class FirecrawlService:
-    """Service for fetching SERP data via Firecrawl API."""
+    """Service for fetching SERP data via Firecrawl SDK v2."""
 
     _DEFAULT_TIMEOUT = 60
     _MAX_RESULTS = 20
 
-    def __init__(
-        self, api_key: str, search_url: str = "https://api.firecrawl.dev/v1/search"
-    ):
+    def __init__(self, api_key: str):
+        """
+        Initialize Firecrawl service with official SDK.
+
+        Args:
+            api_key: Firecrawl API key
+        """
+        if not FIRECRAWL_AVAILABLE or Firecrawl is None:
+            raise ImportError(
+                "Firecrawl SDK not installed. Install with: pip install firecrawl-py"
+            )
+
         self.api_key = api_key
-        self.search_url = search_url
-        # Reuse session for connection pooling
-        self._session = requests.Session()
-        self._session.headers.update(
-            {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            }
-        )
+        self.client = Firecrawl(api_key=api_key)
 
     def search(self, query: str, limit: int = 10, country: str = "US") -> List[Dict]:
         """
-        Search using Firecrawl API with connection pooling.
+        Search using Firecrawl SDK v2.
+
+        Args:
+            query: Search query
+            limit: Number of results (max 20)
+            country: Country code (e.g., 'US', 'UK', 'CA')
 
         Returns:
-            List of search results with markdown and HTML content
+            List of search results with title, URL, description
         """
         if not self.api_key:
-            raise ValueError("Firecrawl API key is required")
-
-        payload = {
-            "query": query,
-            "limit": min(limit, self._MAX_RESULTS),
-            "country": country,
-            "sources": ["web"],
-            "scrapeOptions": {
-                "formats": ["markdown", "html"],
-                "onlyMainContent": True,
-            },
-        }
+            return []
 
         try:
-            response = self._session.post(
-                self.search_url, json=payload, timeout=self._DEFAULT_TIMEOUT
+            # Use SDK's search method - this returns SearchData object
+            response = self.client.search(
+                query=query,
+                limit=min(limit, self._MAX_RESULTS),
+                location=country,
             )
-            response.raise_for_status()
-            return response.json().get("data", [])
 
-        except requests.exceptions.HTTPError as e:
-            status_code = e.response.status_code
-            error_msgs = {
-                401: "❌ Firecrawl API Error: Invalid or expired API key (401 Unauthorized)\n   Please check your API key at firecrawl.dev",
-                403: "❌ Firecrawl API Error: Forbidden (403) - Check your subscription plan",
-                429: "⚠️  Firecrawl API Error: Rate limit exceeded (429) - Wait and retry",
-                500: "⚠️  Firecrawl API Error: Server error (500) - Try again later",
-            }
-            print(error_msgs.get(status_code, f"⚠️  Firecrawl request failed: {str(e)}"))
-            return []
-        except requests.exceptions.RequestException as e:
-            print(f"⚠️  Firecrawl connection failed: {str(e)}")
-            return []
+            # Extract web results from SDK response
+            results = []
+            if hasattr(response, "web") and response.web:
+                for item in response.web:
+                    # SearchResultWeb object has url, title, description attributes
+                    results.append(
+                        {
+                            "url": getattr(item, "url", ""),
+                            "title": getattr(item, "title", ""),
+                            "description": getattr(item, "description", ""),
+                            "markdown": "",  # Basic search doesn't include markdown
+                            "html": "",
+                            "links": [],
+                            "metadata": {},
+                        }
+                    )
 
-    def __del__(self):
-        """Clean up session on object destruction."""
-        if hasattr(self, "_session"):
-            self._session.close()
+            # If we want full content, we need to scrape each result
+            # This is done separately to keep costs down
+            return results
+
+        except Exception as e:
+            error_msg = str(e).lower()
+
+            if "500" in error_msg or "internal server" in error_msg:
+                print(
+                    f"⚠️  Firecrawl server error (500): The service is temporarily unavailable."
+                )
+            elif (
+                "401" in error_msg
+                or "unauthorized" in error_msg
+                or "authentication" in error_msg
+            ):
+                print(f"❌ Firecrawl authentication failed: Invalid API key.")
+            elif "429" in error_msg or "rate limit" in error_msg:
+                print(f"⚠️  Firecrawl rate limit exceeded. Please wait before retrying.")
+            else:
+                print(f"⚠️  Firecrawl SDK error: {e}")
+
+            return []
 
 
 class HybridIntentAnalyzer:
@@ -277,9 +302,14 @@ class HybridIntentAnalyzer:
         self.keyword_weight = keyword_weight / total
 
         # Initialize services
-        self.firecrawl = (
-            FirecrawlService(firecrawl_api_key) if firecrawl_api_key else None
-        )
+        self.firecrawl = None
+        if firecrawl_api_key:
+            try:
+                self.firecrawl = FirecrawlService(firecrawl_api_key)
+            except ImportError as e:
+                print(f"⚠️ Firecrawl SDK not available: {e}")
+                print("Install with: pip install firecrawl-py")
+
         self.llm_analyzer = None  # Lazy init
         self.llm_model = llm_model
         self.llm_base_url = llm_base_url
