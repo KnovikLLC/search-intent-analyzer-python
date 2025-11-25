@@ -1,5 +1,5 @@
 """
-Hybrid Intent Analyzer App - Streamlit UI
+Search Intent Analyzer App - Streamlit UI
 Combines Firecrawl SERP data with Ollama LLM reasoning
 Version: 2.0.0 - Refactored with modular components
 """
@@ -23,7 +23,7 @@ load_dotenv()
 
 # Page config
 st.set_page_config(
-    page_title="Hybrid Intent Analyzer",
+    page_title="Search Intent Analyzer",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded",

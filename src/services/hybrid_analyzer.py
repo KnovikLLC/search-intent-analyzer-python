@@ -1,5 +1,5 @@
 """
-Hybrid Intent Analyzer - Combines Firecrawl SERP data with Ollama LLM reasoning
+Search Intent Analyzer - Combines Firecrawl SERP data with Ollama LLM reasoning
 Version: 2.0.0
 Author: Knovik • Deelaka Kariyawasam
 
@@ -288,7 +288,7 @@ class HybridIntentAnalyzer:
         keyword_weight: float = 0.30,
     ):
         """
-        Initialize Hybrid Intent Analyzer.
+        Initialize Search Intent Analyzer.
 
         Args:
             firecrawl_api_key: Firecrawl API key (optional)
@@ -546,7 +546,7 @@ def quick_test():
         result = analyzer.analyze(test_keyword, use_firecrawl=True, use_llm=True)
 
     print("=" * 60)
-    print("🎯 Hybrid Intent Analyzer - Test Results")
+    print("🎯 Search Intent Analyzer - Test Results")
     print("=" * 60)
     print(f"Keyword: {result.keyword}")
     print(f"Primary Intent: {result.primary_intent}")
