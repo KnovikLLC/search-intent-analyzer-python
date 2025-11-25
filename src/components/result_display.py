@@ -6,7 +6,6 @@ Handles rendering of analysis results
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from typing import List
 
 from src.services.hybrid_analyzer import HybridIntentResult
 from src.config.constants import INTENT_COLORS
@@ -52,20 +51,6 @@ def render_signal_badges(result: HybridIntentResult):
 
     st.markdown("".join(scoring_badges), unsafe_allow_html=True)
 
-    # LLM explanation badge (separate)
-    if result.llm_reasoning:
-        st.markdown("### 💡 AI Explanation")
-        llm_badge = render_signal_badge(True, "🤖", "LLM Analysis (explanation only)")
-        st.markdown(llm_badge, unsafe_allow_html=True)
-
-
-def render_metrics(result: HybridIntentResult):
-    """Render key metrics in columns."""
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Primary Intent", result.primary_intent)
-    col2.metric("Confidence", f"{result.confidence_score}%")
-    col3.metric("Mixed Intent", "Yes" if result.is_mixed_intent else "No")
-
 
 def render_intent_chart(result: HybridIntentResult):
     """Render intent distribution bar chart."""
@@ -86,12 +71,6 @@ def render_reasoning_section(result: HybridIntentResult):
     """Render analysis reasoning and LLM insights."""
     st.markdown("### 💡 Analysis Reasoning")
     st.info(result.reasoning)
-
-    if result.llm_reasoning:
-        st.markdown("### 🤖 LLM Analysis")
-        st.success(
-            f"**{result.llm_primary_intent}** ({result.llm_confidence:.1f}%)\n\n{result.llm_reasoning}"
-        )
 
     if result.serp_features:
         st.markdown("### 🔍 SERP Features Detected")
@@ -119,7 +98,6 @@ def render_result_card(result: HybridIntentResult):
     """
     render_intent_card(result)
     render_signal_badges(result)
-    render_metrics(result)
     render_intent_chart(result)
     render_reasoning_section(result)
     render_detailed_scores(result)
