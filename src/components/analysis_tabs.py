@@ -59,6 +59,8 @@ def analyze_batch(
                     "Firecrawl Used": result.firecrawl_used,
                     "LLM Used": bool(result.llm_reasoning),
                     "SERP Features": ", ".join(result.serp_features) or "None",
+                    "Reasoning": result.reasoning,
+                    "LLM Explanation": result.llm_reasoning or "Not available",
                 }
             )
 
@@ -73,6 +75,8 @@ def analyze_batch(
                     "Firecrawl Used": False,
                     "LLM Used": False,
                     "SERP Features": f"Error: {str(e)}",
+                    "Reasoning": f"Analysis failed: {str(e)}",
+                    "LLM Explanation": "Not available",
                 }
             )
 
@@ -101,7 +105,7 @@ def render_single_analysis_tab(analyzer: HybridIntentAnalyzer, config: dict):
     col1, col2 = st.columns([1, 4])
     with col1:
         analyze_button = st.button(
-            "🎯 Analyze", type="primary", use_container_width=True
+            "Analyze", type="primary", use_container_width=True
         )
 
     if analyze_button and keyword:
@@ -146,7 +150,7 @@ def render_batch_analysis_tab(analyzer: HybridIntentAnalyzer, config: dict):
     col1, col2 = st.columns([1, 4])
     with col1:
         batch_button = st.button(
-            "📊 Analyze Batch", type="primary", use_container_width=True
+            "Analyze Batch", type="primary", use_container_width=True
         )
 
     if batch_button and keywords_input:
@@ -159,7 +163,15 @@ def render_batch_analysis_tab(analyzer: HybridIntentAnalyzer, config: dict):
 
             # Display results table
             st.markdown("### 📋 Results")
-            st.dataframe(df, use_container_width=True)
+            display_columns = [
+                "Keyword",
+                "Primary Intent",
+                "Confidence",
+                "Secondary Intent",
+                "Firecrawl Used",
+                "LLM Used",
+            ]
+            st.dataframe(df[display_columns], use_container_width=True)
 
             # Download button
             csv = df.to_csv(index=False)
@@ -175,6 +187,22 @@ def render_batch_analysis_tab(analyzer: HybridIntentAnalyzer, config: dict):
 
             # Intent distribution chart
             render_intent_distribution(df)
+
+            # Detailed results with reasoning for each keyword
+            st.markdown("### 🧠 Detailed Analysis by Keyword")
+            st.caption("Click on each keyword to see full reasoning and AI explanation")
+
+            for idx, row in df.iterrows():
+                with st.expander(
+                    f"**{row['Keyword']}** - {row['Primary Intent']} ({row['Confidence']})"
+                ):
+                    st.markdown("**📊 Classification Details**")
+                    st.write(f"**Primary Intent:** {row['Primary Intent']}")
+                    st.write(f"**Confidence:** {row['Confidence']}")
+                    st.write(f"**Secondary Intent:** {row['Secondary Intent']}")
+                    st.markdown("---")
+                    st.markdown("**💡 Classification Reasoning**")
+                    st.info(row["Reasoning"])
 
 
 def render_analysis_tabs(analyzer: HybridIntentAnalyzer, config: dict):
