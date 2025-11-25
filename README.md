@@ -7,9 +7,7 @@ Powerful search intent analysis tool with **two modes**: traditional rule-based 
 
 ---
 
-## 🎯 Hybrid Intent Analyzer
-
-### 🎯 **Hybrid Version** (Recommended - Most Accurate & Flexible)
+## 🎯 Search Intent Analyzer
 
 ✅ **SERP-Based Classification** - Powered by Firecrawl real search data (70%)  
 ✅ **Keyword Pattern Matching** - Fast regex-based detection (30%)  
@@ -162,19 +160,23 @@ streamlit run src/app_hybrid.py
 
 ### Usage Modes
 
-**Mode 1: Full Power (All Signals)** 🚀
+**Mode 1: Full Hybrid (SERP + AI Explanations)** 🚀 ⭐
 
 - ✅ Firecrawl API key configured
 - ✅ Ollama running
 - ✅ Maximum accuracy (~92-95%)
+- ✅ SERP-based classification (70%) + Keywords (30%)
+- ✅ AI-powered explanations for transparency
 - 💰 Cost: ~$100-150/month (Firecrawl)
 
-**Mode 2: Free & Powerful (LLM + Keywords)** ⭐ _Recommended for most users_
+**Mode 2: SERP-Based (No AI Explanations)**
 
-- ❌ No Firecrawl API key
-- ✅ Ollama running
-- ✅ Great accuracy (~89-91%)
-- 💰 Cost: $0/month (completely free!)
+- ✅ Firecrawl API key configured
+- ❌ Ollama not running
+- ✅ Great accuracy (~87-89%)
+- ✅ SERP-based classification (70%) + Keywords (30%)
+- ❌ No AI explanations
+- 💰 Cost: ~$100-150/month (Firecrawl)
 
 **Mode 3: Fallback (Keywords Only)**
 
@@ -242,10 +244,10 @@ All settings are adjustable in real-time through the Streamlit sidebar:
 
 **⚖️ Signal Weights** (Advanced)
 
-- **Firecrawl Weight**: 0.0 - 1.0 (default: 0.40)
-- **LLM Weight**: 0.0 - 1.0 (default: 0.40)
-- **Keyword Weight**: 0.0 - 1.0 (default: 0.20)
-- Weights are automatically normalized
+- **Firecrawl Weight**: 0.0 - 1.0 (default: 0.70) - Primary classification source
+- **Keyword Weight**: 0.0 - 1.0 (default: 0.30) - Supporting classification
+- **LLM Weight**: Fixed at 0.0 - LLM generates explanations only, does not participate in scoring
+- Classification weights are automatically normalized
 
 **🤖 LLM Settings**
 
@@ -261,40 +263,37 @@ All settings are adjustable in real-time through the Streamlit sidebar:
 
 ### Recommended Configurations
 
-**For Maximum Accuracy:**
+**For Maximum Accuracy (Recommended):** ⭐
 
 ```
-Firecrawl: ON (40%)
-LLM: ON (40%)
-Keywords: ON (20%)
-Model: llama3.1:8b
-Results: 20
+Firecrawl: ON (70% - Primary Classification)
+Keywords: ON (30% - Supporting Classification)
+Model: llama3.2:3b or llama3.1:8b
+Results: 10-20
 ```
 
-**For Zero Cost:**
+**For Production Without AI Explanations:**
 
 ```
-Firecrawl: OFF
-LLM: ON (70%)
+Firecrawl: ON (70%)
 Keywords: ON (30%)
-Model: llama3.2:3b
+LLM: OFF
+Results: 10
 ```
 
-**For Speed:**
+**For Zero Cost (Fallback):**
 
 ```
 Firecrawl: OFF
-LLM: ON (60%)
-Keywords: ON (40%)
-Model: llama3.2:1b
+Keywords: ON (100%)
+LLM: OFF
 ```
 
 **Cost Breakdown:**
 
-- 💚 **Keywords only**: FREE
-- 💚 **Keywords + LLM**: FREE
-- 💰 **Keywords + Firecrawl**: ~$100-150/month
-- 💰 **All three (Hybrid)**: ~$100-150/month (highest accuracy!)
+- 💚 **Keywords only**: FREE (~70-75% accuracy)
+- 💰 **Firecrawl + Keywords**: ~$100-150/month (~87-89% accuracy)
+- 💰 **Firecrawl + Keywords + AI Explanations**: ~$100-150/month (~92-95% accuracy, **recommended**)
 
 ---
 
@@ -341,14 +340,15 @@ python -m src.services.hybrid_analyzer
 
 | Configuration            | Cost/Month | Accuracy | Speed   | Privacy | Offline |
 | ------------------------ | ---------- | -------- | ------- | ------- | ------- |
-| **Hybrid (All 3)**       | $100-150   | ~92-95%  | 2-4 sec | Partial | No      |
-| **LLM + Keywords** ⭐    | FREE       | ~89-91%  | 1-3 sec | 100%    | Yes     |
+| **Hybrid (SERP+AI)** ⭐  | $100-150   | ~92-95%  | 2-4 sec | Partial | No      |
 | **Firecrawl + Keywords** | $100-150   | ~87-89%  | 2-5 sec | Partial | No      |
 | **Keywords Only**        | FREE       | ~70-75%  | <1 sec  | 100%    | Yes     |
 | Legacy: Rule-Based       | $150-300   | ~87%     | 2-5 sec | No      | No      |
 | Legacy: LLM-Only         | FREE       | ~89-91%  | 1-3 sec | 100%    | Yes     |
 
-**⭐ Recommended**: LLM + Keywords for most users (free, accurate, private)
+**⭐ Recommended**: Hybrid (Firecrawl SERP + Keywords + AI Explanations) for production use
+
+**Note**: Classification is based on SERP data (70%) + Keywords (30%). LLM provides AI-powered explanations but does not participate in scoring.
 
 ---
 
@@ -359,27 +359,28 @@ python -m src.services.hybrid_analyzer
 ```python
 from src.services.hybrid_analyzer import HybridIntentAnalyzer
 
-# Initialize with all signals
+# Initialize with SERP-based classification + AI explanations
 analyzer = HybridIntentAnalyzer(
-    firecrawl_api_key="fc-your_key",  # Optional
-    llm_model="llama3.2:3b",
-    firecrawl_weight=0.40,
-    llm_weight=0.40,
-    keyword_weight=0.20
+    firecrawl_api_key="fc-your_key",  # Required for SERP data
+    llm_model="llama3.2:3b",           # Optional, for explanations
+    firecrawl_weight=0.70,             # Primary classification (70%)
+    llm_weight=0.0,                    # Explanation only (0%)
+    keyword_weight=0.30                # Supporting classification (30%)
 )
 
 # Analyze single keyword
 result = analyzer.analyze(
     keyword="how to learn python programming",
-    use_firecrawl=True,
-    use_llm=True,
+    use_firecrawl=True,  # Get SERP data for classification
+    use_llm=True,        # Get AI explanation (optional)
     firecrawl_limit=10
 )
 
 print(f"Primary Intent: {result.primary_intent}")
 print(f"Confidence: {result.confidence_score}%")
-print(f"Reasoning: {result.reasoning}")
-print(f"Signals Used: Firecrawl={result.firecrawl_used}, LLM={bool(result.llm_reasoning)}")
+print(f"Classification Reasoning: {result.reasoning}")
+print(f"AI Explanation: {result.llm_reasoning}")
+print(f"Signals Used: Firecrawl={result.firecrawl_used}, LLM Explanation={bool(result.llm_reasoning)}")
 print(f"All Scores: {result.all_intent_scores}")
 ```
 
@@ -540,19 +541,22 @@ ollama create ecommerce-intent -f Modelfile
 ```python
 from src.services.hybrid_analyzer import HybridIntentAnalyzer
 
-# Trust LLM more for semantic queries
+# Default: Trust SERP data most (recommended)
 analyzer = HybridIntentAnalyzer(
-    firecrawl_weight=0.20,
-    llm_weight=0.60,
-    keyword_weight=0.20
+    firecrawl_weight=0.70,  # SERP data is primary truth source
+    llm_weight=0.0,         # LLM for explanations only
+    keyword_weight=0.30     # Keywords provide supporting signals
 )
 
-# Trust Firecrawl more for commercial queries
-analyzer_commercial = HybridIntentAnalyzer(
+# Alternative: Balance SERP and Keywords more evenly
+analyzer_balanced = HybridIntentAnalyzer(
     firecrawl_weight=0.60,
-    llm_weight=0.30,
-    keyword_weight=0.10
+    llm_weight=0.0,
+    keyword_weight=0.40
 )
+
+# Note: LLM weight is always 0.0 in current architecture
+# LLM generates explanations but does not participate in classification scoring
 ```
 
 ### Performance Optimization
