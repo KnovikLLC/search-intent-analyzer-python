@@ -96,9 +96,7 @@ def render_weight_settings(
     }
 
     if use_firecrawl and use_llm:
-        st.sidebar.caption(
-            "⭐ Firecrawl (SERP) + Keywords for scoring, LLM for explanation"
-        )
+        st.sidebar.caption("Firecrawl + Keywords for scoring, LLM for explanation")
         fc_weight = st.sidebar.slider(
             "Firecrawl weight",
             0.0,
@@ -116,37 +114,10 @@ def render_weight_settings(
             help="Pattern matching - secondary scoring",
         )
         llm_weight = 0.0  # LLM not used for scoring
-        st.sidebar.info("💡 LLM generates explanation only, not used for scoring")
     else:
         fc_weight, llm_weight, kw_weight = weight_presets[(use_firecrawl, use_llm)]
 
     return fc_weight, llm_weight, kw_weight
-
-
-def render_firecrawl_status_warning(firecrawl_key: str):
-    """Render Firecrawl status warning if applicable."""
-    if firecrawl_key and len(firecrawl_key) > 20:
-        st.sidebar.subheader("🔍 Firecrawl Status")
-        st.sidebar.warning(
-            "⚠️ **Currently Experiencing Issues**\n\n"
-            "Firecrawl is returning 500 errors. Your API key is valid, but their servers are temporarily down.\n\n"
-            "✅ **You can still analyze!** The app will use LLM + Keywords (still very accurate)."
-        )
-
-
-def render_about_section():
-    """Render about section with app information."""
-    st.sidebar.subheader("About")
-    st.sidebar.info(
-        "**Hybrid Intent Analyzer v2.0**\n\n"
-        "🎯 **Intent Classification (100%):**\n"
-        "• 70% Firecrawl SERP Analysis\n"
-        "• 30% Keyword Pattern Matching\n\n"
-        "🤖 **LLM Role:**\n"
-        "• Generates explanations ONLY\n"
-        "• Does NOT participate in scoring\n"
-        "• Explains WHY the classification was made"
-    )
 
 
 def render_sidebar() -> dict:
@@ -171,16 +142,6 @@ def render_sidebar() -> dict:
 
     # Weight settings
     fc_weight, llm_weight, kw_weight = render_weight_settings(use_firecrawl, use_llm)
-
-    st.sidebar.divider()
-
-    # Status warnings
-    render_firecrawl_status_warning(firecrawl_key)
-
-    st.sidebar.divider()
-
-    # About section
-    render_about_section()
 
     return {
         "firecrawl_key": firecrawl_key,
