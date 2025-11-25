@@ -72,7 +72,7 @@ def main():
     """Main app function - orchestrates all components."""
     # Header
     st.markdown(
-        '<p class="main-header">🎯 Hybrid Intent Analyzer</p>', unsafe_allow_html=True
+        '<p class="main-header">🎯 Search Intent Analyzer</p>', unsafe_allow_html=True
     )
     st.markdown(
         '<p class="sub-header">SERP-Based Intent Classification with AI-Powered Explanations</p>',
