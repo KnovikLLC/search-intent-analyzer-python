@@ -136,15 +136,14 @@ def render_batch_summary(df: pd.DataFrame):
         df: DataFrame with batch results
     """
     st.markdown("### 📊 Summary Statistics")
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
 
     primary_counts = df["Primary Intent"].value_counts()
     most_common = primary_counts.index[0] if not primary_counts.empty else "N/A"
 
     col1.metric("Total Keywords", len(df))
     col2.metric("Most Common", most_common)
-    col3.metric("Mixed Intent", df["Mixed Intent"].sum())
-    col4.metric("Firecrawl Used", df["Firecrawl Used"].sum())
+    col3.metric("Firecrawl Used", df["Firecrawl Used"].sum())
 
 
 def render_intent_distribution(df: pd.DataFrame):
