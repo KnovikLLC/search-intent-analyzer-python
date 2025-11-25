@@ -28,7 +28,10 @@ except ImportError:
     FIRECRAWL_AVAILABLE = False
     Firecrawl = None
 
-from .llm_intent_analyzer import LLMIntentAnalyzer
+try:
+    from .llm_intent_analyzer import LLMIntentAnalyzer
+except ImportError:
+    from llm_intent_analyzer import LLMIntentAnalyzer
 
 
 class IntentConfidence(Enum):
@@ -415,9 +418,7 @@ class HybridIntentAnalyzer:
                 print(f"⚠️  Firecrawl analysis failed: {str(e)}")
 
         # 3. Aggregate scores (only Firecrawl + Keywords, no LLM scoring)
-        final_scores = self.aggregate_scores(
-            keyword_scores, firecrawl_scores, None
-        )
+        final_scores = self.aggregate_scores(keyword_scores, firecrawl_scores, None)
 
         # 5. Determine primary/secondary intents
         sorted_intents = sorted(final_scores.items(), key=lambda x: x[1], reverse=True)
@@ -470,10 +471,8 @@ class HybridIntentAnalyzer:
                 self._init_llm()
                 if self.llm_analyzer:
                     # Create a custom prompt for explanation
-                    explanation_prompt = f"""{analysis_context}
+                    explanation_prompt = f"""{analysis_context} Based on the SERP analysis and keyword patterns above, explain in 2-3 sentences WHY the primary intent is '{primary}' and why '{secondary}' is the secondary intent. Focus on what the SERP results and keyword patterns reveal about user intent."""
 
-Based on the SERP analysis and keyword patterns above, explain in 2-3 sentences WHY the primary intent is '{primary}' and why '{secondary}' is the secondary intent. Focus on what the SERP results and keyword patterns reveal about user intent."""
-                    
                     # Get LLM explanation (we'll extract just the reasoning text)
                     llm_result = self.llm_analyzer.analyze(explanation_prompt)
                     llm_reasoning = llm_result.reasoning
