@@ -7,17 +7,6 @@ import streamlit as st
 import os
 
 
-def render_api_keys_section() -> str:
-    """Render API keys configuration section."""
-    st.sidebar.subheader("API Keys")
-    return st.sidebar.text_input(
-        "Firecrawl API Key",
-        value=os.getenv("FIRECRAWL_API_KEY", ""),
-        type="password",
-        help="Get your API key from firecrawl.dev",
-    )
-
-
 def render_signal_toggles(has_firecrawl_key: bool) -> tuple[bool, bool]:
     """Render signal toggle checkboxes."""
     st.sidebar.subheader("Analysis Signals")
@@ -130,7 +119,7 @@ def render_sidebar() -> dict:
     st.sidebar.title("⚙️ Configuration")
 
     # API Keys
-    firecrawl_key = render_api_keys_section()
+    firecrawl_key = os.getenv("FIRECRAWL_API_KEY", "")
 
     # Signal toggles
     has_firecrawl_key = bool(firecrawl_key)
