@@ -34,13 +34,13 @@ class LLMIntentAnalyzer:
     ]
 
     def __init__(
-        self, model: str = "llama3.2:3b", base_url: str = "http://localhost:11434"
+        self, model: str = "llama3.2:1b", base_url: str = "http://localhost:11434"
     ):
         """
         Initialize the LLM Intent Analyzer.
 
         Args:
-            model: Ollama model name (default: llama3.2:3b)
+            model: Ollama model name (default: llama3.2:1b)
             base_url: Ollama API endpoint
         """
         self.model = model
@@ -325,7 +325,7 @@ class LLMIntentAnalyzer:
 
 
 # Utility function for quick testing
-def quick_test(query: str, model: str = "llama3.2:3b"):
+def quick_test(query: str, model: str = "llama3.2:1b"):
     """Quick test function for the analyzer."""
     analyzer = LLMIntentAnalyzer(model=model)
     result = analyzer.analyze(query)
