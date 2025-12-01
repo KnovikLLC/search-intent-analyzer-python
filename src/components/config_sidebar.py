@@ -52,14 +52,14 @@ def render_llm_settings(use_llm: bool) -> tuple[str, str]:
     if use_llm:
         llm_model = st.sidebar.selectbox(
             "Model",
-            ["llama3.2:3b", "llama3.2:1b", "llama3.1:8b", "mistral:7b"],
+            ["llama3.2:1b"],
             help="Ollama model to use",
         )
         llm_url = st.sidebar.text_input(
             "Ollama URL", value="http://localhost:11434", help="Ollama API endpoint"
         )
     else:
-        llm_model = "llama3.2:3b"
+        llm_model = "llama3.2:1b"
         llm_url = "http://localhost:11434"
 
     return llm_model, llm_url
