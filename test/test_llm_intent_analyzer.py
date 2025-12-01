@@ -41,15 +41,15 @@ class TestLLMIntentAnalyzer:
         with patch.object(
             LLMIntentAnalyzer, "_check_ollama_connection", return_value=True
         ):
-            return LLMIntentAnalyzer(model="llama3.2:3b")
+            return LLMIntentAnalyzer(model="llama3.2:1b")
 
     def test_initialization(self):
         """Test analyzer initialization."""
         with patch.object(
             LLMIntentAnalyzer, "_check_ollama_connection", return_value=True
         ):
-            analyzer = LLMIntentAnalyzer(model="llama3.2:3b")
-            assert analyzer.model == "llama3.2:3b"
+            analyzer = LLMIntentAnalyzer(model="llama3.2:1b")
+            assert analyzer.model == "llama3.2:1b"
             assert analyzer.base_url == "http://localhost:11434"
 
     def test_create_prompt(self, analyzer):
@@ -300,7 +300,7 @@ class TestLLMIntentAnalyzerIntegration:
     def test_real_ollama_connection(self):
         """Test real connection to Ollama (requires Ollama running)."""
         try:
-            analyzer = LLMIntentAnalyzer(model="llama3.2:3b")
+            analyzer = LLMIntentAnalyzer(model="llama3.2:1b")
             assert analyzer is not None
         except ConnectionError:
             pytest.skip("Ollama not running")
@@ -309,7 +309,7 @@ class TestLLMIntentAnalyzerIntegration:
     def test_real_analysis(self):
         """Test real query analysis (requires Ollama running)."""
         try:
-            analyzer = LLMIntentAnalyzer(model="llama3.2:3b")
+            analyzer = LLMIntentAnalyzer(model="llama3.2:1b")
             result = analyzer.analyze("how to learn python programming")
 
             assert isinstance(result, IntentResult)

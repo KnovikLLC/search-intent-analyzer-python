@@ -118,7 +118,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 ollama serve
 
 # Pull the recommended model (in a new terminal)
-ollama pull llama3.2:3b
+ollama pull llama3.2:1b
 
 # Verify installation
 ollama list
@@ -251,7 +251,7 @@ All settings are adjustable in real-time through the Streamlit sidebar:
 
 **🤖 LLM Settings**
 
-- **Model**: llama3.2:3b, llama3.2:1b, llama3.1:8b, mistral:7b
+- **Model**: llama3.2:1b, llama3.1:8b, mistral:7b
 - **Ollama URL**: Default `http://localhost:11434`
 - **Timeout**: Configurable in code (default: 30s)
 
@@ -268,7 +268,7 @@ All settings are adjustable in real-time through the Streamlit sidebar:
 ```
 Firecrawl: ON (70% - Primary Classification)
 Keywords: ON (30% - Supporting Classification)
-Model: llama3.2:3b or llama3.1:8b
+Model: llama3.2:1b or llama3.1:8b
 Results: 10-20
 ```
 
@@ -308,7 +308,7 @@ source .venv/bin/activate
 # Test LLM analyzer directly
 python -c "
 from src.services.llm_intent_analyzer import LLMIntentAnalyzer
-analyzer = LLMIntentAnalyzer(model='llama3.2:3b')
+analyzer = LLMIntentAnalyzer(model='llama3.2:1b')
 result = analyzer.analyze('how to learn python')
 print(f'✅ {result.primary_intent} ({result.confidence}%)')
 "
@@ -362,7 +362,7 @@ from src.services.hybrid_analyzer import HybridIntentAnalyzer
 # Initialize with SERP-based classification + AI explanations
 analyzer = HybridIntentAnalyzer(
     firecrawl_api_key="fc-your_key",  # Required for SERP data
-    llm_model="llama3.2:3b",           # Optional, for explanations
+    llm_model="llama3.2:1b",           # Optional, for explanations
     firecrawl_weight=0.70,             # Primary classification (70%)
     llm_weight=0.0,                    # Explanation only (0%)
     keyword_weight=0.30                # Supporting classification (30%)
@@ -390,7 +390,7 @@ print(f"All Scores: {result.all_intent_scores}")
 from src.services.llm_intent_analyzer import LLMIntentAnalyzer
 
 # Initialize
-analyzer = LLMIntentAnalyzer(model="llama3.2:3b")
+analyzer = LLMIntentAnalyzer(model="llama3.2:1b")
 
 # Analyze single query
 result = analyzer.analyze("best noise cancelling headphones 2024")
@@ -438,7 +438,7 @@ curl http://localhost:11434/api/tags
 ollama list
 
 # Pull missing model
-ollama pull llama3.2:3b
+ollama pull llama3.2:1b
 
 # Verify
 ollama list
@@ -523,7 +523,7 @@ Create specialized models for your domain:
 ```bash
 # Create custom Modelfile
 cat > Modelfile << EOF
-FROM llama3.2:3b
+FROM llama3.2:1b
 SYSTEM You are an expert SEO analyst specializing in e-commerce search intent analysis.
 You understand product research patterns, buying signals, and customer journey stages.
 PARAMETER temperature 0.1
