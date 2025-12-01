@@ -320,6 +320,24 @@ class HybridIntentAnalyzer:
         self.keyword_analyzer = KeywordAnalyzer()
         self.serp_analyzer = FirecrawlSERPAnalyzer()
 
+    def _get_intent_goal(self, intent: str) -> str:
+        """
+        Convert intent name to beginner-friendly user goal description.
+
+        Args:
+            intent: Intent name (Informational, Transactional, etc.)
+
+        Returns:
+            Simple description of what the user wants to do
+        """
+        intent_goals = {
+            "Informational": "learn or find information about something",
+            "Transactional": "buy, download, or complete an action",
+            "Navigational": "find a specific website or login page",
+            "Commercial Investigation": "research and compare options before buying",
+        }
+        return intent_goals.get(intent, "search for information")
+
     def _init_llm(self):
         """Lazy initialize LLM analyzer."""
         if self.llm_analyzer is None:
@@ -443,63 +461,125 @@ class HybridIntentAnalyzer:
         else:
             confidence_level = IntentConfidence.LOW
 
-        # 7. Generate reasoning from SERP + Keywords, then ask LLM to explain
-        # Build context for LLM explanation
-        analysis_context = f"Keyword: '{keyword}'\n"
-        analysis_context += f"Primary Intent: {primary} ({primary_score:.1f}%)\n"
-        analysis_context += f"Secondary Intent: {secondary} ({secondary_score:.1f}%)\n\n"
-        
-        if firecrawl_used:
-            analysis_context += f"SERP Analysis: {firecrawl_count} results analyzed\n"
+        # 7. Generate beginner-friendly reasoning based on SERP data and keyword patterns
+        reasons = []
+
+        # Part 1: Explain what we found in the actual search results
+        if firecrawl_used and firecrawl_count > 0:
+            serp_dominant = (
+                max(firecrawl_scores.items(), key=lambda x: x[1])
+                if firecrawl_scores
+                else (primary, 0)
+            )
+
+            # Create beginner-friendly SERP explanation
+            if serp_dominant[1] >= 80:
+                serp_reason = f"When we analyzed the top {firecrawl_count} Google search results, {int(firecrawl_count * serp_dominant[1] / 100)} out of {firecrawl_count} pages were {serp_dominant[0].lower()} content. This means most users searching this keyword want to {self._get_intent_goal(serp_dominant[0])}"
+            elif serp_dominant[1] >= 60:
+                serp_reason = f"Looking at the top {firecrawl_count} Google results, about {int(firecrawl_count * serp_dominant[1] / 100)} pages were {serp_dominant[0].lower()} content, while others were {secondary.lower()}. This shows users mainly want to {self._get_intent_goal(serp_dominant[0])}, but some also want to {self._get_intent_goal(secondary)}"
+            else:
+                serp_reason = f"The top {firecrawl_count} Google results show a mix of content types, with {primary.lower()} being the most common ({int(firecrawl_count * primary_score / 100)} pages). This tells us users have different goals when searching this keyword"
+
+            # Add clear explanation of what SERP features mean
             if serp_features:
-                analysis_context += f"SERP Features: {', '.join(serp_features[:3])}\n"
-        
-        analysis_context += f"\nKeyword Pattern Scores: "
-        analysis_context += ", ".join([f"{k}: {v:.0f}%" for k, v in sorted(keyword_scores.items(), key=lambda x: x[1], reverse=True)[:2]])
-        
-        if firecrawl_scores:
-            analysis_context += f"\nFirecrawl SERP Scores: "
-            analysis_context += ", ".join([f"{k}: {v:.0f}%" for k, v in sorted(firecrawl_scores.items(), key=lambda x: x[1], reverse=True)[:2]])
-        
-        # Use LLM to explain WHY this classification makes sense
+                feature_meanings = []
+                if "FAQ" in serp_features or "People Also Ask" in serp_features:
+                    feature_meanings.append(
+                        "Google shows FAQ boxes because users are asking questions"
+                    )
+                if "Shopping" in serp_features:
+                    feature_meanings.append(
+                        "Google shows shopping ads because users want to buy"
+                    )
+
+                if feature_meanings:
+                    serp_reason += f". Also, {feature_meanings[0]}"
+
+            reasons.append(serp_reason)
+
+        # Part 2: Explain what the keyword itself tells us
+        top_keyword_intent = max(keyword_scores.items(), key=lambda x: x[1])
+        if top_keyword_intent[1] > 30:
+            # Get specific words from the query that indicate intent
+            query_lower = keyword.lower()
+            found_signals = []
+
+            if "Informational" in top_keyword_intent[0]:
+                info_words = [
+                    w
+                    for w in ["how", "what", "why", "guide", "tutorial", "learn"]
+                    if w in query_lower
+                ]
+                if info_words:
+                    found_signals = info_words
+                    keyword_reason = f"The keyword contains '{', '.join(found_signals[:2])}' which are question/learning words. This signals the user wants to learn or understand something, not buy or find a specific website"
+            elif "Transactional" in top_keyword_intent[0]:
+                trans_words = [
+                    w
+                    for w in ["buy", "price", "order", "download", "book", "purchase"]
+                    if w in query_lower
+                ]
+                if trans_words:
+                    found_signals = trans_words
+                    keyword_reason = f"The keyword contains '{', '.join(found_signals[:2])}' which are action/buying words. This signals the user is ready to make a purchase or complete an action"
+            elif "Commercial Investigation" in top_keyword_intent[0]:
+                comm_words = [
+                    w
+                    for w in ["best", "top", "vs", "review", "compare"]
+                    if w in query_lower
+                ]
+                if comm_words:
+                    found_signals = comm_words
+                    keyword_reason = f"The keyword contains '{', '.join(found_signals[:2])}' which are comparison/research words. This signals the user is researching options before making a decision"
+            elif "Navigational" in top_keyword_intent[0]:
+                nav_words = [
+                    w
+                    for w in ["login", "sign in", "official", "homepage"]
+                    if w in query_lower
+                ]
+                if nav_words:
+                    found_signals = nav_words
+                    keyword_reason = f"The keyword contains '{', '.join(found_signals[:2])}' which are navigation words. This signals the user wants to find a specific website or page"
+
+            if found_signals:
+                reasons.append(keyword_reason)
+            else:
+                # Fallback if no specific words found
+                reasons.append(
+                    f"Based on the overall keyword structure, it appears to be {top_keyword_intent[0].lower()} in nature"
+                )
+
+        # Part 3: Explain the final decision in simple terms
+        score_gap = primary_score - secondary_score
+
+        if score_gap > 40:
+            decision_reason = f"We classified this as '{primary}' (primary) because the evidence strongly points in that direction ({primary_score:.0f}% confidence). The secondary intent '{secondary}' ({secondary_score:.0f}%) is much lower, meaning it's a backup possibility but not the main user goal"
+        elif score_gap > 20:
+            decision_reason = f"We chose '{primary}' as primary ({primary_score:.0f}%) and '{secondary}' as secondary ({secondary_score:.0f}%) because both intents are present in the search results, but {primary.lower()} appears more frequently. This means users have split intentions, but {primary.lower()} is more common"
+        else:
+            decision_reason = f"This keyword has mixed intent - '{primary}' ({primary_score:.0f}%) and '{secondary}' ({secondary_score:.0f}%) are very close. This means different users searching this keyword have different goals - some want to {self._get_intent_goal(primary)} while others want to {self._get_intent_goal(secondary)}"
+
+        reasons.append(decision_reason)
+
+        # Try to get LLM reasoning for additional context (optional enhancement)
         llm_reasoning = ""
         llm_confidence = 0.0
         llm_primary = ""
-        
+
         if use_llm:
             try:
                 self._init_llm()
                 if self.llm_analyzer:
-                    # Create a custom prompt for explanation
-                    explanation_prompt = f"""{analysis_context} Based on the SERP analysis and keyword patterns above, explain in 2-3 sentences WHY the primary intent is '{primary}' and why '{secondary}' is the secondary intent. Focus on what the SERP results and keyword patterns reveal about user intent."""
-
-                    # Get LLM explanation (we'll extract just the reasoning text)
-                    llm_result = self.llm_analyzer.analyze(explanation_prompt)
+                    # Get LLM analysis (for metadata only, not used in final reasoning)
+                    llm_result = self.llm_analyzer.analyze(keyword)
                     llm_reasoning = llm_result.reasoning
                     llm_confidence = llm_result.confidence
                     llm_primary = llm_result.primary_intent
             except Exception as e:
-                print(f"⚠️  LLM explanation generation failed: {str(e)}")
-        
-        # Build final reasoning
-        reasons = []
-        
-        if firecrawl_used:
-            serp_summary = f"SERP analysis of {firecrawl_count} results shows {primary_score:.0f}% '{primary}' intent"
-            if serp_features:
-                serp_summary += f" (features: {', '.join(serp_features[:2])})"
-            reasons.append(serp_summary)
-        
-        # Add keyword pattern insight
-        top_keyword_intent = max(keyword_scores.items(), key=lambda x: x[1])
-        if top_keyword_intent[1] > 0:
-            reasons.append(f"Keyword patterns indicate {top_keyword_intent[0]}")
-        
-        # Add LLM explanation if available
-        if llm_reasoning:
-            reasons.append(f"Analysis: {llm_reasoning}")
-        
-        reasoning = ". ".join(reasons) + "." if reasons else "Based on keyword and SERP analysis."
+                print(f"⚠️  LLM analysis failed: {str(e)}")
+
+        # Combine all reasoning into coherent explanation
+        reasoning = ". ".join(reasons) + "."
 
         # 8. Build result
         return HybridIntentResult(
