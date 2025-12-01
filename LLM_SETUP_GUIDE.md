@@ -37,14 +37,13 @@ ollama serve
 Open a **new terminal** and run:
 
 ```bash
-# Pull the recommended model (llama3.2:3b - ~2GB)
-ollama pull llama3.2:3b
+# Pull the recommended model (llama3.2:1b - ~1GB)
+ollama pull llama3.2:1b
 ```
 
 **Alternative models:**
+
 ```bash
-# Smaller, faster model (~1GB)
-ollama pull llama3.2:1b
 
 # Larger, more accurate model (~4.7GB)
 ollama pull llama3.1:8b
@@ -106,6 +105,7 @@ Once the app is running:
 3. View results in the **Results** tab
 
 Or enter your own queries like:
+
 ```
 how to train a dog
 buy iPhone 15 pro
@@ -142,7 +142,6 @@ best laptops 2024 comparison
 
 In the sidebar, you can choose different models:
 
-- `llama3.2:3b` ⭐ **Recommended** - Best balance of speed and accuracy
 - `llama3.2:1b` - Fastest, good for testing
 - `llama3.1:8b` - Most accurate, slower
 - `mistral:7b` - Alternative option
@@ -151,10 +150,12 @@ In the sidebar, you can choose different models:
 ### Performance Tips
 
 **For faster analysis:**
-- Use `llama3.2:1b` or `llama3.2:3b`
+
+- Use `llama3.2:1b`
 - Reduce batch size
 
 **For higher accuracy:**
+
 - Use `llama3.1:8b` or `mistral:7b`
 - Ensure Ollama is the only heavy process running
 
@@ -165,6 +166,7 @@ In the sidebar, you can choose different models:
 ### Issue: "Cannot connect to Ollama"
 
 **Solution:**
+
 ```bash
 # Check if Ollama is running
 ps aux | grep ollama
@@ -176,9 +178,10 @@ ollama serve
 ### Issue: "Model not found"
 
 **Solution:**
+
 ```bash
 # Pull the model
-ollama pull llama3.2:3b
+ollama pull llama3.2:1b
 
 # Verify it's installed
 ollama list
@@ -187,6 +190,7 @@ ollama list
 ### Issue: Slow performance
 
 **Solution:**
+
 - Use a smaller model (`llama3.2:1b`)
 - Close other applications
 - On Apple Silicon, ensure Rosetta is not being used
@@ -194,7 +198,9 @@ ollama list
 ### Issue: Timeout errors
 
 **Solution:**
+
 - Increase timeout in `llm_intent_analyzer.py`:
+
 ```python
 # Change line in _call_ollama method:
 timeout=60  # Increase to 120 for slower machines
@@ -223,16 +229,16 @@ Each query gets scores for all 4 intents, normalized to sum to 100%.
 
 ## 🆚 Comparison: Old vs New
 
-| Feature | Old (Firecrawl) | New (LLM) |
-|---------|----------------|-----------|
-| **API Key Required** | ✅ Yes | ❌ No |
-| **Privacy** | Data sent to API | 100% Local |
-| **Cost** | Pay per request | Free |
-| **Speed** | Depends on API | Fast (local) |
-| **Setup** | Simple | Requires Ollama |
-| **Reasoning** | No | ✅ Yes |
-| **SERP Analysis** | ✅ Yes | ❌ No |
-| **Accuracy** | High (with SERP) | High (LLM-based) |
+| Feature              | Old (Firecrawl)  | New (LLM)        |
+| -------------------- | ---------------- | ---------------- |
+| **API Key Required** | ✅ Yes           | ❌ No            |
+| **Privacy**          | Data sent to API | 100% Local       |
+| **Cost**             | Pay per request  | Free             |
+| **Speed**            | Depends on API   | Fast (local)     |
+| **Setup**            | Simple           | Requires Ollama  |
+| **Reasoning**        | No               | ✅ Yes           |
+| **SERP Analysis**    | ✅ Yes           | ❌ No            |
+| **Accuracy**         | High (with SERP) | High (LLM-based) |
 
 ---
 
@@ -244,7 +250,7 @@ You can use Ollama with custom models:
 
 ```bash
 # Create a Modelfile
-echo "FROM llama3.2:3b" > Modelfile
+echo "FROM llama3.2:1b" > Modelfile
 echo "SYSTEM You are an SEO expert..." >> Modelfile
 
 # Create custom model
@@ -259,7 +265,7 @@ Then select your custom model in the app.
 from src.services.llm_intent_analyzer import LLMIntentAnalyzer
 
 # Initialize
-analyzer = LLMIntentAnalyzer(model="llama3.2:3b")
+analyzer = LLMIntentAnalyzer(model="llama3.2:1b")
 
 # Analyze multiple queries
 queries = ["how to code", "buy laptop", "google login"]
@@ -283,6 +289,7 @@ for result in results:
 ## 🤝 Support
 
 For issues or questions:
+
 1. Check this README
 2. Review the troubleshooting section
 3. Open an issue on GitHub
