@@ -281,7 +281,7 @@ class HybridIntentAnalyzer:
     def __init__(
         self,
         firecrawl_api_key: str = "",
-        llm_model: str = "llama3.2:3b",
+        llm_model: str = "llama3.2:1b",
         llm_base_url: str = "http://localhost:11434",
         firecrawl_weight: float = 0.70,
         llm_weight: float = 0.0,
